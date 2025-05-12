@@ -1,0 +1,4 @@
+## Append samples of your project ##
+resources:
+- k8s.startkubernetes.com_v2_pdfdocument.yaml
+# +kubebuilder:scaffold:manifestskustomizesamples

@@ -1,0 +1,10 @@
+apiVersion: k8s.startkubernetes.com.my.domain/v2
+kind: PdfDocument
+metadata:
+  name: pdfdocument
+  namespace: default
+spec:
+  documentName: my-text
+  text: |
+    ### My document
+    Hello **world**!
