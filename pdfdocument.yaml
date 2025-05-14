@@ -8,3 +8,14 @@ spec:
   text: |
     ### My document
     Hello **world**!
+---
+apiVersion: k8s.startkubernetes.com.my.domain/v2
+kind: PdfDocument
+metadata:
+  name: pdfdocument
+  namespace: pdf-test
+spec:
+  documentName: my-text
+  text: |
+    ### My document
+    Hello **world pdf-test**!

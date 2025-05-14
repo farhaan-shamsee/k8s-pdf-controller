@@ -52,24 +52,34 @@ type PdfDocumentReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.20.4/pkg/reconcile
 func (r *PdfDocumentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	// Create a logger instance from the context
 	_ = logf.FromContext(ctx)
 
+	// Fetch the PdfDocument resource from the Kubernetes cluster
 	var pdfDoc k8sstartkubernetescomv2.PdfDocument
 	if err := r.Get(ctx, req.NamespacedName, &pdfDoc); err != nil {
+		// Log an error if the PdfDocument resource is not found or cannot be fetched
 		logf.Log.Error(err, "unable to fetch PdfDocument")
+		// Return without requeuing if the resource is not found
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	// Create a Job specification based on the PdfDocument resource
 	jobSpec, err := r.createJob(pdfDoc)
 	if err != nil {
+		// Log an error if the Job specification cannot be created
 		logf.Log.Error(err, "unable to create job spec")
+		// Return without requeuing if there is an error
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	// Create the Job resource in the Kubernetes cluster
 	if err := r.Create(ctx, &jobSpec); err != nil {
+		// Log an error if the Job resource cannot be created
 		logf.Log.Error(err, "unable to create job")
 	}
 
+	// Return successfully without requeuing
 	return ctrl.Result{}, nil
 }
 
