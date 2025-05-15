@@ -1,9 +1,10 @@
 apiVersion: k8s.startkubernetes.com.my.domain/v2
 kind: PdfDocument
 metadata:
-  labels:
-    app.kubernetes.io/name: pdfcontroller
-    app.kubernetes.io/managed-by: kustomize
-  name: pdfdocument-sample
+  name: pdfdocument
+  namespace: default
 spec:
-  # TODO(user): Add fields here
+  documentName: my-text
+  text: |
+    ### My document
+    Hello **world**!
