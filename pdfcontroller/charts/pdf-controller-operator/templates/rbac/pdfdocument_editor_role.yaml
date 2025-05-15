@@ -1,0 +1,36 @@
+# This rule is not used by the project pdfcontroller itself.
+# It is provided to allow the cluster admin to help manage permissions for users.
+#
+# Grants permissions to create, update, and delete resources within the k8s.startkubernetes.com.my.domain.
+# This role is intended for users who need to manage these resources
+# but should not control RBAC or manage permissions for others.
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: pdfcontroller
+    app.kubernetes.io/managed-by: kustomize
+  name: pdfdocument-editor-role
+rules:
+- apiGroups:
+  - k8s.startkubernetes.com.my.domain
+  resources:
+  - pdfdocuments
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - k8s.startkubernetes.com.my.domain
+  resources:
+  - pdfdocuments/status
+  verbs:
+  - get
+- apiGroups: ["batch"]
+  resources: ["jobs"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]

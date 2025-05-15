@@ -23,8 +23,10 @@ import (
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -53,31 +55,73 @@ type PdfDocumentReconciler struct {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.20.4/pkg/reconcile
 func (r *PdfDocumentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	// Create a logger instance from the context
-	_ = logf.FromContext(ctx)
+	logger := logf.FromContext(ctx)
 
 	// Fetch the PdfDocument resource from the Kubernetes cluster
 	var pdfDoc k8sstartkubernetescomv2.PdfDocument
 	if err := r.Get(ctx, req.NamespacedName, &pdfDoc); err != nil {
-		// Log an error if the PdfDocument resource is not found or cannot be fetched
-		logf.Log.Error(err, "unable to fetch PdfDocument")
-		// Return without requeuing if the resource is not found
-		return ctrl.Result{}, client.IgnoreNotFound(err)
+		if apierrors.IsNotFound(err) {
+			// Log if the PdfDocument resource is deleted
+			logger.Info("PdfDocument resource deleted", "name", req.Name, "namespace", req.Namespace)
+
+			// Attempt to delete the associated Job
+			jobName := req.Name + "-job"
+			var job batchv1.Job
+			err := r.Get(ctx, types.NamespacedName{Name: jobName, Namespace: req.Namespace}, &job)
+			if err == nil {
+				if err := r.Delete(ctx, &job, client.PropagationPolicy(metav1.DeletePropagationBackground)); err != nil {
+					logger.Error(err, "failed to delete associated Job", "job", jobName)
+					return ctrl.Result{}, err
+				}
+				logger.Info("Associated Job deleted successfully", "job", jobName)
+			} else if !apierrors.IsNotFound(err) {
+				logger.Error(err, "failed to fetch associated Job", "job", jobName)
+				return ctrl.Result{}, err
+			}
+
+			// Return without requeuing if the resource is not found
+			return ctrl.Result{}, nil
+		} else {
+			// Log an error if the PdfDocument resource cannot be fetched
+			logger.Error(err, "unable to fetch PdfDocument")
+			return ctrl.Result{}, client.IgnoreNotFound(err)
+		}
 	}
 
 	// Create a Job specification based on the PdfDocument resource
 	jobSpec, err := r.createJob(pdfDoc)
 	if err != nil {
 		// Log an error if the Job specification cannot be created
-		logf.Log.Error(err, "unable to create job spec")
+		logger.Error(err, "unable to create job spec")
 		// Return without requeuing if there is an error
 		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	var existingJob batchv1.Job
+	err = r.Get(ctx, types.NamespacedName{Name: jobSpec.Name, Namespace: jobSpec.Namespace}, &existingJob)
+	if err == nil {
+		// Job already exists, check if it succeeded
+		if existingJob.Status.Succeeded > 0 {
+			logger.Info("PDF generation job succeeded", "job", jobSpec.Name)
+		} else {
+			logger.Info("Job already exists, skipping creation", "job", jobSpec.Name)
+		}
+		return ctrl.Result{}, nil
+	} else if !apierrors.IsNotFound(err) {
+		// Some other error occurred
+		logger.Error(err, "failed to check if Job exists")
+		return ctrl.Result{}, err
 	}
 
 	// Create the Job resource in the Kubernetes cluster
 	if err := r.Create(ctx, &jobSpec); err != nil {
 		// Log an error if the Job resource cannot be created
-		logf.Log.Error(err, "unable to create job")
+		logger.Error(err, "unable to create job")
+		return ctrl.Result{}, err
 	}
+
+	// Log that the Job was successfully created
+	logger.Info("Job created successfully", "job", jobSpec.Name)
 
 	// Return successfully without requeuing
 	return ctrl.Result{}, nil
