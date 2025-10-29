@@ -12,7 +12,8 @@
 - Idempotent
   - Happy path: If there are no changes, do nothing and exits gracefully.
   - Change path: If there are changes, make the necessary updates to reach the desired state. If update works, update the .status. If update fails, log the error and retry later.
-  - <img width="1370" height="897" alt="image" src="https://github.com/user-attachments/assets/4284094e-db2a-4c6f-8e3b-be0fbef61ea4" />
+    - <img width="1370" height="897" alt="image" src="https://github.com/user-attachments/assets/4284094e-db2a-4c6f-8e3b-be0fbef61ea4" />
+  - Infinite Loop Path(Sad Path): Only write to API server when there are changes. If no changes, do nothing. This prevents infinite loops of updates.
 
 * Operator is CR + CRD
 * Controller is this how part
