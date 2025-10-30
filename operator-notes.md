@@ -21,3 +21,9 @@
 * Controller is this how part
 
 * Think of k8s as SDK
+
+## Operator Functions
+
+1. "k8s.io/client-go/plugin/pkg/client/auth": Imports all client auth plugins (e.g., Azure, GCP, OIDC, etc.)
+2. `cmd/main.go`: Entry point of the application. Sets up the manager and starts the controller.
+3. `config`: Contains configuration files for the operator.
